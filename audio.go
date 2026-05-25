@@ -2,6 +2,7 @@ package audio
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -14,12 +15,12 @@ import (
 	"github.com/faiface/beep/speaker"
 )
 
-var initSpeaker sync.Once
-
 type Player struct {
 	Ctrl   *beep.Ctrl
 	Volume *effects.Volume
 }
+
+var initSpeaker sync.Once
 
 func GetMP3Files(dirPath string) ([]string, error) {
 	entries, err := os.ReadDir(dirPath)
@@ -43,28 +44,27 @@ func GetMP3Files(dirPath string) ([]string, error) {
 	return files, nil
 }
 
-func PlayMusic(path string) *Player {
-	f, err := os.Open(path)
+func PlayMusic(file string) *Player {
+
+	f, err := os.Open(file)
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
+		log.Println(err)
 		return nil
 	}
+
 	streamer, format, err := mp3.Decode(f)
 	if err != nil {
-		fmt.Printf("Error decoding mp3: %v\n", err)
-		f.Close()
+		log.Println(err)
 		return nil
 	}
 
 	initSpeaker.Do(func() {
 		speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
 	})
-
 	volume := &effects.Volume{
 		Streamer: streamer,
-		Base:     2,
-		Volume:   1.0,
-		Silent:   false,
+		Base:     2.0,
+		Volume:   0.0,
 	}
 	ctrl := &beep.Ctrl{
 		Streamer: volume,
@@ -76,4 +76,5 @@ func PlayMusic(path string) *Player {
 		Ctrl:   ctrl,
 		Volume: volume,
 	}
+
 }
