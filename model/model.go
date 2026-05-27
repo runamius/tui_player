@@ -4,12 +4,10 @@ import (
 	"audio_player/audio"
 	"fmt"
 	"log"
-	"math"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/faiface/beep/speaker"
 )
 
 type Model struct {
@@ -85,96 +83,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// режим плеера
-		switch msg.String() {
-
-		case "ctrl+c":
-			return m, tea.Quit
-
-		case "down":
-			if m.Cursor < len(m.List)-1 {
-				m.Cursor++
-			}
-
-		case "up":
-			if m.Cursor > 0 {
-				m.Cursor--
-			}
-
-		case "enter":
-
-			selected := m.List[m.Cursor]
-
-			if m.Player == nil || m.Player.Ctrl == nil {
-				m.startTrack(selected)
-			} else {
-				if selected == m.Current {
-
-					speaker.Lock()
-
-					m.Playing = !m.Playing
-					m.Player.Ctrl.Paused = !m.Playing
-
-					speaker.Unlock()
-
-				} else {
-					speaker.Clear()
-					m.startTrack(selected)
-				}
-			}
-
-		case "+", "=":
-
-			if m.VolumeVar < 5 {
-				m.VolumeVar += 0.1
-				m.VolumeVar = math.Round(m.VolumeVar*10) / 10
-			}
-
-			m.applyToVolume()
-
-		case "-", "_":
-
-			if m.VolumeVar > -5 {
-				m.VolumeVar -= 0.125
-				m.VolumeVar = math.Round(m.VolumeVar*10) / 10
-			}
-
-			m.applyToVolume()
-		}
+		return m.Playermode(msg)
 	}
 
 	return m, nil
 }
 
-func (m *Model) startTrack(filename string) {
-	path := m.Directory + filename
-	p := audio.PlayMusic(path)
-	if p != nil {
-		m.Player = p
-		m.Current = filename
-		m.Playing = true
-		m.applyToVolume()
-	} else {
-		log.Printf("Failed to play: %s", path)
-	}
-}
-
-func (m *Model) applyToVolume() {
-	if m.Player == nil || m.Player.Volume == nil {
-		return
-	}
-
-	speaker.Lock()
-	defer speaker.Unlock()
-
-	m.Player.Volume.Volume = m.VolumeVar
-
-	if m.VolumeVar <= -5.0 {
-		m.Player.Volume.Silent = true
-	} else {
-		m.Player.Volume.Silent = false
-	}
-}
 func (m Model) View() string {
 
 	if m.InputMode {
