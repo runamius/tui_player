@@ -4,6 +4,7 @@ import (
 	"audio_player/audio"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -44,19 +45,22 @@ func InitialModel() Model {
 func (m *Model) loadDir() {
 	dir := m.Input.Value()
 
-	files, err := audio.GetMP3Files(dir)
+	if dir == "~" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			log.Printf("Cannot get home dir: %v", err)
+			return
+		}
+		dir = home
+	}
+	if dir == "" {
+		m.EnterDir("/home/user/Music")
+	}
+
+	err := m.EnterDir(dir)
 	if err != nil {
-		log.Printf("Cannot open directory: %v", err)
-		return
-	}
 
-	if len(dir) > 0 && dir[len(dir)-1] != '/' {
-		dir += "/"
 	}
-
-	m.Directory = dir
-	m.List = files
-	m.Cursor = 0
 	m.InputMode = false
 }
 
@@ -118,12 +122,13 @@ func (m Model) View() string {
 	s += "\n"
 
 	if m.Current != "" {
-		s += "Current: " + m.Current
+		s += fmt.Sprintf("Current: %s   Cursor: %s", m.Current, m.List[m.Cursor])
 	}
 
 	s += "\n\n↑ ↓ move | Enter play | ctrl+c quit"
 	bars := VolumeVisual(float64(m.VolumeVar))
 	s += fmt.Sprintf("\nVolume: %s", bars)
+	s += fmt.Sprintf("\n%s", m.Directory)
 
 	return s
 }

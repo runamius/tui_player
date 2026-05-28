@@ -4,6 +4,9 @@ import (
 	"audio_player/audio"
 	"log"
 	"math"
+	"os"
+	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/faiface/beep/speaker"
@@ -11,26 +14,42 @@ import (
 
 // Player mode
 func (m Model) Playermode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
+	switch msg.Type {
 
-	case "ctrl+c":
+	case tea.KeyCtrlC:
 		return m, tea.Quit
 
-	case "down":
+	case tea.KeyDown:
 		m.moveDown()
 
-	case "up":
+	case tea.KeyUp:
 		m.moveUp()
 
-	case "enter":
+	case tea.KeyEnter:
+		filestat, _ := os.Stat(m.Directory + m.List[m.Cursor])
+		if filestat.IsDir() {
+			m.EnterDir(m.Directory + m.List[m.Cursor])
+		} else {
+			m.toggleTrack()
+		}
 
-		m.toggleTrack()
+	case tea.KeyBackspace:
+		m.GoToParentDir()
 
-	case "+", "=":
-		m.changeVolume(0.125)
+	case tea.KeyRunes:
+		switch string(msg.Runes) {
 
-	case "-", "_":
-		m.changeVolume(-0.125)
+		case "+", "=":
+			m.changeVolume(0.125)
+
+		case "-", "_":
+			m.changeVolume(-0.125)
+		case "m", "M", "Ь", "ь":
+			m.Player.Volume.Silent = !m.Player.Volume.Silent
+
+		case "1":
+			m.InputMode = true
+		}
 	}
 	return m, nil
 }
@@ -106,11 +125,28 @@ func (m *Model) changeVolume(delta float64) {
 		newVolume = 5
 	}
 
-	if newVolume < 0 {
-		newVolume = 0
+	if newVolume < -5 {
+		newVolume = -5
 	}
 	m.VolumeVar = math.Round(newVolume*10) / 10
 	m.applyToVolume()
 }
 
-// Insert mode
+func (m *Model) GoToParentDir() {
+	if m.Directory == "" {
+		return
+	}
+
+	cleanPath := strings.TrimSuffix(m.Directory, "/")
+
+	parent := filepath.Dir(cleanPath)
+
+	if parent == cleanPath {
+		return
+	}
+
+	err := m.EnterDir(parent)
+	if err != nil {
+		log.Printf("Failed to go to parent dir %s: %v", parent, err)
+	}
+}

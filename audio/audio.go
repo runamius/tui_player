@@ -3,8 +3,6 @@ package audio
 import (
 	"fmt"
 	"os"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,28 +17,6 @@ var initSpeaker sync.Once
 type Player struct {
 	Ctrl   *beep.Ctrl
 	Volume *effects.Volume
-}
-
-func GetMP3Files(dirPath string) ([]string, error) {
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, fmt.Errorf("can't open dir, %s, %w", dirPath, err)
-	}
-
-	var files []string
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		if strings.HasSuffix(strings.ToLower(entry.Name()), ".mp3") {
-			files = append(files, entry.Name())
-		}
-	}
-
-	sort.Strings(files)
-	return files, nil
 }
 
 func PlayMusic(path string) *Player {
